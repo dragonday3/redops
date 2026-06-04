@@ -44,9 +44,6 @@ reports/
 redops.db
 data/
 
-# MITRE cache
-~/.redops/
-
 # IDE
 .vscode/
 .idea/
