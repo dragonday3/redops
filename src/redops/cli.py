@@ -1,6 +1,5 @@
 import asyncio
 import json
-import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Optional
