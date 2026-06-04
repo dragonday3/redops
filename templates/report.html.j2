@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ engagement.name }} — Red Team Report</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 14px; line-height: 1.6; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 40px 20px; }
+  h1 { color: #f0f6fc; font-size: 2em; margin-bottom: 8px; }
+  h2 { color: #58a6ff; font-size: 1.4em; margin: 40px 0 16px; border-bottom: 1px solid #21262d; padding-bottom: 8px; }
+  h3 { color: #8b949e; font-size: 1em; margin: 20px 0 8px; }
+  p { margin-bottom: 12px; color: #8b949e; }
+  .cover { border: 1px solid #21262d; border-radius: 8px; padding: 32px; margin-bottom: 40px; }
+  .cover h1 { margin-bottom: 4px; }
+  .cover .client { font-size: 1.1em; color: #8b949e; margin-bottom: 16px; }
+  .cover .meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 16px; }
+  .cover .meta-item { background: #161b22; border-radius: 6px; padding: 12px 16px; }
+  .cover .meta-item .label { font-size: 0.8em; color: #8b949e; text-transform: uppercase; letter-spacing: 0.05em; }
+  .cover .meta-item .value { font-weight: 600; color: #f0f6fc; margin-top: 4px; }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .stat-card { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 20px; text-align: center; }
+  .stat-card .num { font-size: 2.5em; font-weight: 700; color: #58a6ff; }
+  .stat-card .lbl { font-size: 0.85em; color: #8b949e; margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  th { background: #161b22; color: #8b949e; text-align: left; padding: 10px 12px; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #21262d; }
+  td { padding: 10px 12px; border-bottom: 1px solid #21262d; color: #c9d1d9; vertical-align: top; }
+  tr:hover td { background: #161b22; }
+  code { background: #161b22; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.9em; color: #79c0ff; }
+  .scope-list { list-style: none; }
+  .scope-list li { padding: 6px 0; border-bottom: 1px solid #21262d; color: #8b949e; }
+  .scope-list li::before { content: "▸ "; color: #58a6ff; }
+  .roe { background: #161b22; border-left: 3px solid #58a6ff; padding: 16px 20px; border-radius: 0 6px 6px 0; white-space: pre-wrap; color: #8b949e; }
+  .classification { background: #da3633; color: #fff; text-align: center; padding: 8px; font-weight: 700; letter-spacing: 0.1em; margin-bottom: 32px; border-radius: 4px; }
+  .gap-item { background: #161b22; border-left: 3px solid #da3633; padding: 10px 16px; margin-bottom: 8px; border-radius: 0 6px 6px 0; }
+  .gap-item .action { font-weight: 600; color: #f0f6fc; }
+  .gap-item .meta { font-size: 0.85em; color: #8b949e; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="classification">CONFIDENTIAL — AUTHORIZED USE ONLY</div>
+
+  <!-- Cover -->
+  <div class="cover">
+    <h1>{{ engagement.name }}</h1>
+    <div class="client">{{ engagement.client }}</div>
+    <div class="meta">
+      <div class="meta-item"><div class="label">Status</div><div class="value">{{ engagement.status | status_badge | safe }}</div></div>
+      <div class="meta-item"><div class="label">Period</div><div class="value">{{ engagement.start_date }} — {{ engagement.end_date }}</div></div>
+      <div class="meta-item"><div class="label">Operators</div><div class="value">{{ engagement.operators | join(", ") or "N/A" }}</div></div>
+      <div class="meta-item"><div class="label">Created</div><div class="value">{{ engagement.created_at | format_dt }}</div></div>
+    </div>
+  </div>
+
+  <!-- Executive Summary -->
+  <h2>Executive Summary</h2>
+  <div class="stat-grid">
+    <div class="stat-card"><div class="num">{{ achieved_count }}/{{ total_objectives }}</div><div class="lbl">Objectives Achieved</div></div>
+    <div class="stat-card"><div class="num">{{ ttps | length }}</div><div class="lbl">TTPs Exercised</div></div>
+    <div class="stat-card"><div class="num">{{ log_entries | length }}</div><div class="lbl">Log Entries</div></div>
+    <div class="stat-card"><div class="num">{{ detection_gaps | length }}</div><div class="lbl">Detection Gaps</div></div>
+  </div>
+
+  <!-- Objectives -->
+  <h2>Objectives</h2>
+  {% if objectives %}
+  <table>
+    <thead><tr><th>Title</th><th>Type</th><th>Status</th><th>Completed</th></tr></thead>
+    <tbody>
+    {% for obj in objectives %}
+    <tr>
+      <td>{{ obj.title }}</td>
+      <td>{{ obj.type }}</td>
+      <td>{{ obj.status | status_badge | safe }}</td>
+      <td>{{ obj.completed_at | format_dt }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No objectives recorded.</p>
+  {% endif %}
+
+  <!-- MITRE ATT&CK Coverage -->
+  <h2>MITRE ATT&amp;CK Coverage</h2>
+  {% if ttps %}
+  <table>
+    <thead><tr><th>ID</th><th>Name</th><th>Tactic</th><th>Phase</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for ttp in ttps %}
+    <tr>
+      <td><code>{{ ttp.technique_id }}</code></td>
+      <td>{{ ttp.technique_name }}</td>
+      <td>{{ ttp.tactic }}</td>
+      <td>{{ ttp.phase }}</td>
+      <td>{{ ttp.status | status_badge | safe }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No TTPs recorded.</p>
+  {% endif %}
+
+  <!-- Technical Narrative -->
+  <h2>Technical Narrative</h2>
+  {% if log_entries %}
+  <table>
+    <thead><tr><th>Timestamp</th><th>Operator</th><th>Action</th><th>Target</th><th>Technique</th><th>Result</th></tr></thead>
+    <tbody>
+    {% for entry in log_entries %}
+    <tr>
+      <td>{{ entry.timestamp | format_dt }}</td>
+      <td>{{ entry.operator }}</td>
+      <td>{{ entry.action }}</td>
+      <td>{{ entry.target }}</td>
+      <td>{% if entry.technique_id %}<code>{{ entry.technique_id }}</code>{% else %}—{% endif %}</td>
+      <td>{{ entry.result | status_badge | safe }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No operator log entries recorded.</p>
+  {% endif %}
+
+  <!-- Detection Gaps -->
+  <h2>Detection Gaps</h2>
+  {% if detection_gaps %}
+  <p>The following {{ detection_gaps | length }} action(s) succeeded without triggering detection:</p>
+  {% for entry in detection_gaps %}
+  <div class="gap-item">
+    <div class="action">{{ entry.action }}</div>
+    <div class="meta">Target: {{ entry.target }} &nbsp;·&nbsp; Operator: {{ entry.operator }} &nbsp;·&nbsp; {% if entry.technique_id %}<code>{{ entry.technique_id }}</code>{% endif %} &nbsp;·&nbsp; {{ entry.timestamp | format_dt }}</div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <p>No undetected successful actions.</p>
+  {% endif %}
+
+  <!-- Appendix -->
+  <h2>Appendix — Scope &amp; Rules of Engagement</h2>
+  <h3>In Scope</h3>
+  <ul class="scope-list">
+  {% for s in engagement.scope %}
+    <li>{{ s }}</li>
+  {% else %}
+    <li>Not specified</li>
+  {% endfor %}
+  </ul>
+  <h3>Out of Scope</h3>
+  <ul class="scope-list">
+  {% for s in engagement.out_of_scope %}
+    <li>{{ s }}</li>
+  {% else %}
+    <li>Not specified</li>
+  {% endfor %}
+  </ul>
+  <h3>Rules of Engagement</h3>
+  <div class="roe">{{ engagement.rules_of_engagement or "Not specified" }}</div>
+
+</div>
+</body>
+</html>
