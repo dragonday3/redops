@@ -2,7 +2,7 @@ import io
 import json
 import os
 from contextlib import asynccontextmanager
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -211,7 +211,7 @@ async def list_opsec(id: str, storage: StorageDep):
 # ── Reports ───────────────────────────────────────────────────────────────────
 
 @app.post("/engagements/{id}/report")
-async def generate_report(id: str, format: str = "json", storage: StorageDep = None):
+async def generate_report(id: str, storage: StorageDep, format: str = "json"):
     engagement = await storage.get_engagement(id)
     if not engagement:
         raise HTTPException(status_code=404, detail=f"Engagement {id} not found")
