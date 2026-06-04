@@ -1,11 +1,9 @@
 """Async tests for Storage (SQLAlchemy 2.0 Core + aiosqlite in-memory)."""
 from __future__ import annotations
 
-import uuid
 from datetime import date, datetime, timezone
 
 import pytest
-import pytest_asyncio
 
 from redops.models.engagement import (
     Engagement,
@@ -20,7 +18,7 @@ from redops.storage.db import Storage
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
-@pytest_asyncio.fixture
+@pytest.fixture
 async def storage():
     """In-memory SQLite storage, initialized and torn down per test."""
     s = Storage("sqlite+aiosqlite:///:memory:")
@@ -118,6 +116,13 @@ async def test_update_engagement(storage):
 
 
 @pytest.mark.asyncio
+async def test_update_engagement_not_found(storage):
+    eng = Engagement(name="X", client="C", start_date=date(2024, 1, 1), end_date=date(2024, 12, 31))
+    with pytest.raises(KeyError):
+        await storage.update_engagement(eng)
+
+
+@pytest.mark.asyncio
 async def test_delete_engagement(storage):
     eng = _engagement()
     await storage.add_engagement(eng)
@@ -207,6 +212,15 @@ async def test_update_objective(storage):
 
 
 @pytest.mark.asyncio
+async def test_update_objective_not_found(storage):
+    eng = _engagement()
+    await storage.add_engagement(eng)
+    obj = Objective(engagement_id=eng.id, title="Ghost")
+    with pytest.raises(KeyError):
+        await storage.update_objective(obj)
+
+
+@pytest.mark.asyncio
 async def test_add_objective_idempotent(storage):
     eng = _engagement()
     await storage.add_engagement(eng)
@@ -267,6 +281,15 @@ async def test_update_ttp(storage):
     fetched = await storage.get_ttp(ttp.id)
     assert fetched.status == "executed"
     assert fetched.notes == "Ran via PowerShell"
+
+
+@pytest.mark.asyncio
+async def test_update_ttp_not_found(storage):
+    eng = _engagement()
+    await storage.add_engagement(eng)
+    ttp = TTP(engagement_id=eng.id, technique_id="T9999")
+    with pytest.raises(KeyError):
+        await storage.update_ttp(ttp)
 
 
 @pytest.mark.asyncio

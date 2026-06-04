@@ -1,8 +1,3 @@
-import json
-import re
-from datetime import datetime, timezone
-from typing import Any
-
 from sqlalchemy import Column, MetaData, String, Table, Text, text
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
 
@@ -47,13 +42,6 @@ opsec_results_table = Table(
 )
 
 
-def _parse_dt(s: str) -> datetime:
-    """Python 3.10 compatible ISO datetime parse."""
-    s = re.sub(r"\+00:00$", "", s).rstrip("Z")
-    dt = datetime.fromisoformat(s)
-    return dt.replace(tzinfo=timezone.utc)
-
-
 class Storage:
     def __init__(self, database_url: str = "sqlite+aiosqlite:///./redops.db"):
         self._engine: AsyncEngine = create_async_engine(database_url, echo=False)
@@ -88,10 +76,12 @@ class Storage:
 
     async def update_engagement(self, eng: Engagement) -> None:
         async with self._engine.begin() as conn:
-            await conn.execute(
+            result = await conn.execute(
                 text("UPDATE engagements SET data = :data WHERE id = :id"),
                 {"id": eng.id, "data": eng.model_dump_json()},
             )
+            if result.rowcount == 0:
+                raise KeyError(f"Engagement {eng.id!r} not found")
 
     async def delete_engagement(self, id: str) -> None:
         async with self._engine.begin() as conn:
@@ -123,10 +113,12 @@ class Storage:
 
     async def update_objective(self, obj: Objective) -> None:
         async with self._engine.begin() as conn:
-            await conn.execute(
+            result = await conn.execute(
                 text("UPDATE objectives SET data = :data WHERE id = :id"),
                 {"id": obj.id, "data": obj.model_dump_json()},
             )
+            if result.rowcount == 0:
+                raise KeyError(f"Objective {obj.id!r} not found")
 
     # ── TTPs ─────────────────────────────────────────────────────────────────
 
@@ -154,10 +146,12 @@ class Storage:
 
     async def update_ttp(self, ttp: TTP) -> None:
         async with self._engine.begin() as conn:
-            await conn.execute(
+            result = await conn.execute(
                 text("UPDATE ttps SET data = :data WHERE id = :id"),
                 {"id": ttp.id, "data": ttp.model_dump_json()},
             )
+            if result.rowcount == 0:
+                raise KeyError(f"TTP {ttp.id!r} not found")
 
     # ── Log Entries ──────────────────────────────────────────────────────────
 
